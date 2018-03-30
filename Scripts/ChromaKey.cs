@@ -9,7 +9,7 @@ using UnityEngine.Rendering.PostProcessing;
 [PostProcess(typeof(ChromaKeyRenderer), PostProcessEvent.AfterStack, "Custom/ChromaKey")]
 public class ChromaKey : PostProcessEffectSettings
 {
-    public ChromeKeyParameter chromeKeySettings = new ChromeKeyParameter { value = null};
+    public ChromeKeyParameter keys = new ChromeKeyParameter { value = null};
 }
 
 public sealed class ChromaKeyRenderer : PostProcessEffectRenderer<ChromaKey>
@@ -17,16 +17,16 @@ public sealed class ChromaKeyRenderer : PostProcessEffectRenderer<ChromaKey>
     public override void Render(PostProcessRenderContext context)
     {
         var sheet = context.propertySheets.Get(Shader.Find("Hidden/Custom/ChromaKey"));
-        if (settings.chromeKeySettings.value == null)
+        if (settings.keys.value == null)
             return;
 
         var fromTexture = new RenderTargetIdentifier(context.GetScreenSpaceTemporaryRT());
         context.command.BlitFullscreenTriangle(context.source, fromTexture);
         var swap = fromTexture;
         var toTexture = new RenderTargetIdentifier(context.GetScreenSpaceTemporaryRT());
-        for (int i = 0; i<settings.chromeKeySettings.value.Length; i++)
+        for (int i = 0; i<settings.keys.value.Length; i++)
         {
-            AddCommand(sheet, settings.chromeKeySettings.value[i], context,fromTexture,toTexture);
+            AddCommand(sheet, settings.keys.value[i], context,fromTexture,toTexture);
             swap = toTexture;
             toTexture = fromTexture;
             fromTexture = swap;
@@ -64,13 +64,4 @@ public class ChromeKeySettings
 [Serializable]
 public class ChromeKeyParameter : ParameterOverride<ChromeKeySettings[]>
 {
-    /*public override void Interp(ChromeKeySettings[] from, ChromeKeySettings[] to, float t)
-    {
-        int num = Math.Min(from == null?0:from.Length, to == null ? 0 : to.Length);
-        for (int i = 0; i < num; i++)
-        {
-            to[i].screenColor = Color.Lerp(from[i].screenColor, to[i].screenColor, t);
-            to[i].distance = Mathf.Lerp(from[i].distance, to[i].distance, t);
-        }
-    }*/
 }
