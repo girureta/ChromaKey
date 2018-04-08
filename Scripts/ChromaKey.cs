@@ -9,6 +9,7 @@ using UnityEngine.Rendering.PostProcessing;
 [PostProcess(typeof(ChromaKeyRenderer), PostProcessEvent.AfterStack, "Custom/ChromaKey")]
 public class ChromaKey : PostProcessEffectSettings
 {
+    public BoolParameter chainKeys = new BoolParameter { value = false };
     public ChromeKeyParameter keys = new ChromeKeyParameter { value = null};
 }
 
@@ -20,27 +21,23 @@ public sealed class ChromaKeyRenderer : PostProcessEffectRenderer<ChromaKey>
         if (settings.keys.value == null)
             return;
 
-        var fromTexture = new RenderTargetIdentifier(context.GetScreenSpaceTemporaryRT());
-        context.command.BlitFullscreenTriangle(context.source, fromTexture);
-        var swap = fromTexture;
-        var toTexture = new RenderTargetIdentifier(context.GetScreenSpaceTemporaryRT());
+        var compoundTexture = context.GetScreenSpaceTemporaryRT();
+        context.command.BlitFullscreenTriangle(context.source, compoundTexture);
         for (int i = 0; i<settings.keys.value.Length; i++)
         {
-            AddCommand(sheet, settings.keys.value[i], context,fromTexture,toTexture);
-            swap = toTexture;
-            toTexture = fromTexture;
-            fromTexture = swap;
+            AddCommand(sheet, settings.keys.value[i], context, context.source, context.destination, compoundTexture);
         }
-        context.command.BlitFullscreenTriangle(fromTexture, context.destination);
     }
 
-    public void AddCommand(PropertySheet sheet,ChromeKeySettings settings, PostProcessRenderContext context, RenderTargetIdentifier fromTexture,RenderTargetIdentifier toTexture)
+    public void AddCommand(PropertySheet sheet,ChromeKeySettings settings, PostProcessRenderContext context, RenderTargetIdentifier sourceTexture, RenderTargetIdentifier targetTexture, RenderTexture compoundTexture)
     {
         sheet.properties.SetFloat("_Distance", settings.distance);
         sheet.properties.SetColor("_ScreenColor", settings.screenColor);
-        if (settings.replaceTexture != null)
-            sheet.properties.SetTexture("_ReplaceTex", settings.replaceTexture);
-        context.command.BlitFullscreenTriangle(fromTexture, toTexture, sheet, 0);
+        if (settings.backgroundTexture != null)
+            sheet.properties.SetTexture("_BackgroundTex", settings.backgroundTexture);
+        sheet.properties.SetTexture("_CompoundTex", compoundTexture);
+        context.command.BlitFullscreenTriangle(sourceTexture, targetTexture, sheet, 0);
+        context.command.BlitFullscreenTriangle(targetTexture,compoundTexture);
     }
 }
 
@@ -57,7 +54,7 @@ public class ChromeKeySettings
 
     [Tooltip("The texture the screen's pixels may be replaced with")]
     [SerializeField]
-    public Texture replaceTexture = null;
+    public Texture backgroundTexture = null;
 
 }
 
